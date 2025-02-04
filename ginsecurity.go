@@ -1,12 +1,15 @@
 package ginsecurity
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/found-cake/ginsecurity/config"
+	"github.com/found-cake/ginsecurity/utils"
+	h "github.com/found-cake/ginsecurity/utils/header"
 	"github.com/gin-gonic/gin"
 )
 
@@ -21,27 +24,27 @@ type ginsecurity struct {
 func newSecurity(config *config.SecurityConfig) *ginsecurity {
 	fh := make(http.Header)
 	if config.IENoOpen {
-		fh.Set("X-Download-Options", "noopen")
+		fh.Set(h.XDownloadOpotions, "noopen")
 	}
 	if config.NoStoreCache {
-		fh.Set("Cache-Control", "no-cache, no-store, max-age=0, must-revalidate")
-		fh.Set("Pragma", "no-cache")
-		fh.Set("Expires", "0")
+		fh.Set(h.CacheControl, "no-cache, no-store, max-age=0, must-revalidate")
+		fh.Set(h.Pragma, "no-cache")
+		fh.Set(h.Expires, "0")
 	}
 	if config.ContentTypeNosniff {
-		fh.Set("X-Content-Type-Options", "nosniff")
+		fh.Set(h.XContentTypeOptions, "nosniff")
 	}
 	if config.FrameDeny {
-		fh.Set("X-Frame-Options", "DENY")
+		fh.Set(h.XFrameOptions, "DENY")
 	} else if len(config.CustomFrameOptionsValue) > 0 {
-		fh.Set("X-Frame-Options", config.CustomFrameOptionsValue)
+		fh.Set(h.XFrameOptions, config.CustomFrameOptionsValue)
 	}
 	if len(config.BrowserXssFilter) > 0 {
-		fh.Set("X-XSS-Protection", config.BrowserXssFilter)
+		fh.Set(h.XSSProtection, config.BrowserXssFilter)
 	}
 	if config.STS != nil {
 		if value := config.STS.Value(); len(value) > 0 {
-			fh.Set("Strict-Transport-Security", value)
+			fh.Set(h.StrictTransportSecurity, value)
 		}
 	}
 
@@ -64,7 +67,7 @@ func (gs *ginsecurity) writeHeader(c *gin.Context) {
 
 // ssl
 func (gs *ginsecurity) isSSLReq(req *http.Request) bool {
-	if strings.EqualFold(req.URL.Scheme, "https") || req.TLS != nil {
+	if strings.EqualFold(req.URL.Scheme, utils.HTTPS_SCHEME) || req.TLS != nil {
 		return true
 	}
 	for k, v := range gs.sslConfig.ProxyHeaders {
@@ -92,7 +95,7 @@ func (gs *ginsecurity) checkSSL(c *gin.Context) bool {
 	}
 
 	url := req.URL
-	url.Scheme = "https"
+	url.Scheme = utils.HTTPS_SCHEME
 
 	if len(gs.sslConfig.Host) > 0 {
 		url.Host = gs.sslConfig.Host
@@ -120,7 +123,7 @@ func (gs *ginsecurity) checkOrigin(origin string) bool {
 
 func (gs *ginsecurity) checkCORS(c *gin.Context) bool {
 	conf := gs.corsConfig
-	origin := c.Request.Header.Get("Origin")
+	origin := c.Request.Header.Get(h.Origin)
 	if len(origin) == 0 {
 		return true
 	}
@@ -138,44 +141,44 @@ func (gs *ginsecurity) checkCORS(c *gin.Context) bool {
 	header := c.Writer.Header()
 	if c.Request.Method == http.MethodOptions {
 		if !conf.IsAllowAllOrigin && conf.IsAllowCredentials {
-			header.Set("Access-Control-Allow-Credentials", "true")
+			header.Set(h.AccessControlAllowCredentials, "true")
 		}
 		if len(conf.AllowMethods) > 0 {
-			allowMethods := normalize(conf.AllowHeaders, strings.ToUpper)
-			header.Set("Access-Control-Allow-Methods", strings.Join(allowMethods, ","))
+			allowMethods := utils.Normalize(conf.AllowHeaders, strings.ToUpper)
+			header.Set(h.AccessControlAllowMethod, strings.Join(allowMethods, ","))
 		}
 		if len(conf.AllowHeaders) > 0 {
-			allowHeaders := normalize(conf.AllowHeaders, http.CanonicalHeaderKey)
-			header.Set("Access-Control-Allow-Headers", strings.Join(allowHeaders, ","))
+			allowHeaders := utils.Normalize(conf.AllowHeaders, http.CanonicalHeaderKey)
+			header.Set(h.AccessControlAllowHeaders, strings.Join(allowHeaders, ","))
 		}
 		if conf.MaxAge > time.Duration(0) {
 			value := strconv.FormatInt(int64(conf.MaxAge/time.Second), 10)
-			header.Set("Access-Control-Max-Age", value)
+			header.Set(h.AccessControlMaxAge, value)
 		}
 		if conf.IsAllowAllOrigin {
-			header.Set("Access-Control-Allow-Origin", "*")
+			header.Set(h.AccessControlAllowOrigin, "*")
 		} else {
-			header.Set("Access-Control-Allow-Origin", origin)
+			header.Set(h.AccessControlAllowOrigin, origin)
 			if !gs.noCacheStore {
-				header.Add("Vary", "Origin")
-				header.Add("Vary", "Access-Control-Request-Method")
-				header.Add("Vary", "Access-Control-Request-Headers")
+				header.Add(h.Vary, h.Origin)
+				header.Add(h.Vary, h.AccessControlRequestMethod)
+				header.Add(h.Vary, h.AccessControlRequestHeaders)
 			}
 		}
 	} else {
 		if !conf.IsAllowAllOrigin && conf.IsAllowCredentials {
-			header.Set("Access-Control-Allow-Credentials", "true")
+			header.Set(h.AccessControlAllowCredentials, "true")
 		}
 		if len(conf.ExposeHeaders) > 0 {
-			exposeHeaders := normalize(conf.ExposeHeaders, http.CanonicalHeaderKey)
-			header.Set("Access-Control-Expose-Headers", strings.Join(exposeHeaders, ","))
+			exposeHeaders := utils.Normalize(conf.ExposeHeaders, http.CanonicalHeaderKey)
+			header.Set(h.AccessControlExposeHeaders, strings.Join(exposeHeaders, ","))
 		}
 		if conf.IsAllowAllOrigin {
-			header.Set("Access-Control-Allow-Origin", "*")
+			header.Set(h.AccessControlAllowOrigin, "*")
 		} else {
-			header.Set("Access-Control-Allow-Origin", origin)
+			header.Set(h.AccessControlAllowOrigin, origin)
 			if !gs.noCacheStore {
-				header.Set("Vary", "Origin")
+				header.Set(h.Vary, h.Origin)
 			}
 		}
 	}
@@ -183,7 +186,39 @@ func (gs *ginsecurity) checkCORS(c *gin.Context) bool {
 	return true
 }
 
-//TODO CSRF
+func (gs *ginsecurity) checkCSRF(c *gin.Context) bool {
+	conf := gs.csrfConfig
+	if utils.InArray(conf.IgnoreMethods, c.Request.Method) {
+		return true
+	}
+	if utils.InArray(conf.IgnorePath, c.Request.URL.Path) {
+		return true
+	}
+
+	session := conf.SessionGetter(c)
+	token, ok := session.Get(utils.CsrfToken).(string)
+	if !ok || len(token) == 0 || conf.TokenGetter(c) != token {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return false
+	}
+
+	return true
+}
+
+func (gs *ginsecurity) GetCSRFToken(c *gin.Context) (string, error) {
+	if gs.csrfConfig == nil {
+		return "", errors.New("CsrfConfig must not be null")
+	}
+	conf := gs.csrfConfig
+	session := conf.SessionGetter(c)
+	if token, err := conf.TokenGenerator(); err != nil {
+		return token, err
+	} else {
+		session.Set(utils.CsrfToken, token)
+		session.Save()
+		return token, err
+	}
+}
 
 func (gs *ginsecurity) applyToContext(c *gin.Context) {
 	gs.writeHeader(c)
@@ -191,6 +226,9 @@ func (gs *ginsecurity) applyToContext(c *gin.Context) {
 		return
 	}
 	if gs.corsConfig != nil && !gs.checkCORS(c) {
+		return
+	}
+	if gs.csrfConfig != nil && !gs.checkCSRF(c) {
 		return
 	}
 }

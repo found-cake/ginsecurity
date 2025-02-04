@@ -1,6 +1,6 @@
 package config
 
-import "github.com/found-cake/ginsecurity/enums/xss"
+import "github.com/found-cake/ginsecurity/utils"
 
 type SecurityConfig struct {
 	*SSLConfig
@@ -26,6 +26,6 @@ func Default() *SecurityConfig {
 		NoStoreCache:       true,
 		ContentTypeNosniff: true,
 		FrameDeny:          true,
-		BrowserXssFilter:   string(xss.DISABLE),
+		BrowserXssFilter:   string(utils.XSS_DISABLE),
 	}
 }
