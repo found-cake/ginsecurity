@@ -1,6 +1,8 @@
 package config
 
 import (
+	"net/http"
+
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -29,18 +31,24 @@ func defaultCsrfConfig() *CsrfConfig {
 		TokenGetter: func(c *gin.Context) string {
 			r := c.Request
 
-			if token := r.FormValue("_csrf"); len(token) > 0 {
+			token := ""
+
+			if token = r.FormValue("_csrf"); len(token) > 0 {
 				return token
-			} else if token := r.URL.Query().Get("_csrf"); len(token) > 0 {
+			} else if token = r.URL.Query().Get("_csrf"); len(token) > 0 {
 				return token
-			} else if token := r.Header.Get("X-CSRF-TOKEN"); len(token) > 0 {
+			} else if token = r.Header.Get("X-CSRF-TOKEN"); len(token) > 0 {
 				return token
-			} else if token := r.Header.Get("X-XSRF-TOKEN"); len(token) > 0 {
+			} else if token = r.Header.Get("X-XSRF-TOKEN"); len(token) > 0 {
 				return token
 			}
 
-			return ""
+			return token
 		},
-		IgnoreMethods: []string{},
+		IgnoreMethods: []string{
+			http.MethodGet,
+			http.MethodHead,
+			http.MethodOptions,
+		},
 	}
 }
