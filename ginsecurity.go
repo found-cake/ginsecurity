@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type ginsecurity struct {
+type GinSecurity struct {
 	sslConfig    *config.SSLConfig
 	corsConfig   *config.CorsConfig
 	csrfConfig   *config.CsrfConfig
@@ -21,7 +21,7 @@ type ginsecurity struct {
 	fixedHeaders http.Header
 }
 
-func newSecurity(config *config.SecurityConfig) *ginsecurity {
+func newSecurity(config *config.SecurityConfig) *GinSecurity {
 	fh := make(http.Header)
 	if config.IENoOpen {
 		fh.Set(h.XDownloadOpotions, "noopen")
@@ -48,7 +48,7 @@ func newSecurity(config *config.SecurityConfig) *ginsecurity {
 		}
 	}
 
-	gs := &ginsecurity{
+	gs := &GinSecurity{
 		sslConfig:    config.SSLConfig,
 		corsConfig:   config.CorsConfig,
 		csrfConfig:   config.CsrfConfig,
@@ -58,7 +58,7 @@ func newSecurity(config *config.SecurityConfig) *ginsecurity {
 	return gs
 }
 
-func (gs *ginsecurity) writeHeader(c *gin.Context) {
+func (gs *GinSecurity) writeHeader(c *gin.Context) {
 	header := c.Writer.Header()
 	for k, v := range gs.fixedHeaders {
 		header[k] = v
@@ -66,7 +66,7 @@ func (gs *ginsecurity) writeHeader(c *gin.Context) {
 }
 
 // ssl
-func (gs *ginsecurity) isSSLReq(req *http.Request) bool {
+func (gs *GinSecurity) isSSLReq(req *http.Request) bool {
 	if strings.EqualFold(req.URL.Scheme, utils.HTTPS_SCHEME) || req.TLS != nil {
 		return true
 	}
@@ -84,7 +84,7 @@ func (gs *ginsecurity) isSSLReq(req *http.Request) bool {
 	return false
 }
 
-func (gs *ginsecurity) checkSSL(c *gin.Context) bool {
+func (gs *GinSecurity) checkSSL(c *gin.Context) bool {
 	if !gs.sslConfig.IsRedirect {
 		return true
 	}
@@ -109,7 +109,7 @@ func (gs *ginsecurity) checkSSL(c *gin.Context) bool {
 }
 
 // cors
-func (gs *ginsecurity) checkOrigin(origin string) bool {
+func (gs *GinSecurity) checkOrigin(origin string) bool {
 	if gs.corsConfig.IsAllowAllOrigin {
 		return true
 	}
@@ -121,7 +121,7 @@ func (gs *ginsecurity) checkOrigin(origin string) bool {
 	return false
 }
 
-func (gs *ginsecurity) checkCORS(c *gin.Context) bool {
+func (gs *GinSecurity) checkCORS(c *gin.Context) bool {
 	conf := gs.corsConfig
 	origin := c.Request.Header.Get(h.Origin)
 	if len(origin) == 0 {
@@ -186,7 +186,7 @@ func (gs *ginsecurity) checkCORS(c *gin.Context) bool {
 	return true
 }
 
-func (gs *ginsecurity) checkCSRF(c *gin.Context) bool {
+func (gs *GinSecurity) checkCSRF(c *gin.Context) bool {
 	conf := gs.csrfConfig
 	if utils.InArray(conf.IgnoreMethods, c.Request.Method) {
 		return true
@@ -205,7 +205,7 @@ func (gs *ginsecurity) checkCSRF(c *gin.Context) bool {
 	return true
 }
 
-func (gs *ginsecurity) GetCSRFToken(c *gin.Context) (string, error) {
+func (gs *GinSecurity) getCsrfToken(c *gin.Context) (string, error) {
 	if gs.csrfConfig == nil {
 		return "", errors.New("CsrfConfig must not be null")
 	}
@@ -220,7 +220,7 @@ func (gs *ginsecurity) GetCSRFToken(c *gin.Context) (string, error) {
 	}
 }
 
-func (gs *ginsecurity) applyToContext(c *gin.Context) {
+func (gs *GinSecurity) applyToContext(c *gin.Context) {
 	gs.writeHeader(c)
 	if gs.sslConfig != nil && !gs.checkSSL(c) {
 		return
@@ -233,8 +233,11 @@ func (gs *ginsecurity) applyToContext(c *gin.Context) {
 	}
 }
 
+var GetCSRFToken func(c *gin.Context) (string, error)
+
 func New(config *config.SecurityConfig) gin.HandlerFunc {
 	gs := newSecurity(config)
+	GetCSRFToken = gs.getCsrfToken
 	return func(c *gin.Context) {
 		gs.applyToContext(c)
 	}
