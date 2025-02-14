@@ -1,6 +1,7 @@
 package config
 
 import (
+	"regexp"
 	"time"
 
 	"github.com/found-cake/ginsecurity/utils"
@@ -11,13 +12,14 @@ type CorsConfig struct {
 	IsAllowCredentials bool
 	IsAllowAllOrigin   bool
 	AllowOrigins       []string
+	AllowRegexOrigins  []regexp.Regexp
 	AllowMethods       []string
 	AllowHeaders       []string
 	ExposeHeaders      []string
 	MaxAge             time.Duration
 }
 
-func defaultCORSConfig() *CorsConfig {
+func DefaultCORSConfig() *CorsConfig {
 	return &CorsConfig{
 		IsAllowCredentials: false,
 		AllowMethods:       utils.HTTP_METHOD_ALL,

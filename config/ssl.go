@@ -6,7 +6,7 @@ type SSLConfig struct {
 	Host         string
 }
 
-func defaultSSLConfig() *SSLConfig {
+func DefaultSSLConfig() *SSLConfig {
 	return &SSLConfig{
 		IsRedirect: false,
 	}

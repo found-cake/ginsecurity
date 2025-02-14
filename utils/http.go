@@ -13,3 +13,4 @@ var HTTP_METHOD_ALL = []string{
 }
 
 const HTTPS_SCHEME = "https"
+const HTTP_SCHEME = "http"

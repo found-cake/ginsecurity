@@ -18,10 +18,10 @@ type SecurityConfig struct {
 
 func Default() *SecurityConfig {
 	return &SecurityConfig{
-		SSLConfig:          defaultSSLConfig(),
-		STS:                defaultSTSConfig(),
-		CorsConfig:         defaultCORSConfig(),
-		CsrfConfig:         defaultCsrfConfig(),
+		SSLConfig:          DefaultSSLConfig(),
+		STS:                DefaultSTSConfig(),
+		CorsConfig:         DefaultCORSConfig(),
+		CsrfConfig:         DefaultCsrfConfig(),
 		IENoOpen:           true,
 		NoStoreCache:       true,
 		ContentTypeNosniff: true,

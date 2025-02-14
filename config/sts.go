@@ -24,7 +24,7 @@ func (sts *StrictTransportSecurityConfig) Value() string {
 	return v
 }
 
-func defaultSTSConfig() *StrictTransportSecurityConfig {
+func DefaultSTSConfig() *StrictTransportSecurityConfig {
 	return &StrictTransportSecurityConfig{
 		Seconds:           31536000,
 		IncludeSubdomains: true,

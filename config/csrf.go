@@ -16,7 +16,7 @@ type CsrfConfig struct {
 	IgnorePath     []string
 }
 
-func defaultCsrfConfig() *CsrfConfig {
+func DefaultCsrfConfig() *CsrfConfig {
 	return &CsrfConfig{
 		SessionGetter: func(c *gin.Context) sessions.Session {
 			return sessions.Default(c)

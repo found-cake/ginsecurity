@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-func Normalize(values []string, changeFunc func(s string) string) []string {
+func StringsChange(values []string, changeFunc func(s string) string) []string {
 	if values == nil {
 		return nil
 	}
