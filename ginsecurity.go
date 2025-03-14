@@ -13,9 +13,43 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type corsHeader struct {
+	AllowMethods  string
+	AllowHeaders  string
+	MaxAge        string
+	ExposeHeaders string
+}
+
+func generateCorsHeader(conf *config.CorsConfig) *corsHeader {
+	if conf == nil {
+		return nil
+	}
+	ch := &corsHeader{}
+
+	if len(conf.AllowMethods) > 0 {
+		allowMethods := utils.StringsChange(conf.AllowHeaders, strings.ToUpper)
+		ch.AllowMethods = strings.Join(allowMethods, ",")
+	}
+	if len(conf.AllowHeaders) > 0 {
+		allowHeaders := utils.StringsChange(conf.AllowHeaders, http.CanonicalHeaderKey)
+		ch.AllowHeaders = strings.Join(allowHeaders, ",")
+	}
+	if conf.MaxAge > time.Duration(0) {
+		value := strconv.FormatInt(int64(conf.MaxAge/time.Second), 10)
+		ch.MaxAge = value
+	}
+	if len(conf.ExposeHeaders) > 0 {
+		exposeHeaders := utils.StringsChange(conf.ExposeHeaders, http.CanonicalHeaderKey)
+		ch.ExposeHeaders = strings.Join(exposeHeaders, ",")
+	}
+	return ch
+}
+
+
 type ginsecurity struct {
 	sslConfig    *config.SSLConfig
 	corsConfig   *config.CorsConfig
+	corsHeader   *corsHeader
 	csrfConfig   *config.CsrfConfig
 	noCacheStore bool
 	fixedHeaders http.Header
@@ -23,38 +57,39 @@ type ginsecurity struct {
 
 var GetCSRFToken func(c *gin.Context) (string, error)
 
-func newSecurity(config *config.SecurityConfig) *ginsecurity {
+func newSecurity(conf *config.SecurityConfig) *ginsecurity {
 	fh := make(http.Header)
-	if config.IENoOpen {
+	if conf.IENoOpen {
 		fh.Set(h.XDownloadOpotions, "noopen")
 	}
-	if config.NoStoreCache {
+	if conf.NoStoreCache {
 		fh.Set(h.CacheControl, "no-cache, no-store, max-age=0, must-revalidate")
 		fh.Set(h.Pragma, "no-cache")
 		fh.Set(h.Expires, "0")
 	}
-	if config.ContentTypeNosniff {
+	if conf.ContentTypeNosniff {
 		fh.Set(h.XContentTypeOptions, "nosniff")
 	}
-	if config.FrameDeny {
+	if conf.FrameDeny {
 		fh.Set(h.XFrameOptions, "DENY")
-	} else if len(config.CustomFrameOptionsValue) > 0 {
-		fh.Set(h.XFrameOptions, config.CustomFrameOptionsValue)
+	} else if len(conf.CustomFrameOptionsValue) > 0 {
+		fh.Set(h.XFrameOptions, conf.CustomFrameOptionsValue)
 	}
-	if len(config.BrowserXssFilter) > 0 {
-		fh.Set(h.XSSProtection, config.BrowserXssFilter)
+	if len(conf.BrowserXssFilter) > 0 {
+		fh.Set(h.XSSProtection, conf.BrowserXssFilter)
 	}
-	if config.STS != nil {
-		if value := config.STS.Value(); len(value) > 0 {
+	if conf.STS != nil {
+		if value := conf.STS.Value(); len(value) > 0 {
 			fh.Set(h.StrictTransportSecurity, value)
 		}
 	}
 
 	gs := &ginsecurity{
-		sslConfig:    config.SSLConfig,
-		corsConfig:   config.CorsConfig,
-		csrfConfig:   config.CsrfConfig,
-		noCacheStore: config.NoStoreCache,
+		sslConfig:    conf.SSLConfig,
+		corsConfig:   conf.CorsConfig,
+		corsHeader:   generateCorsHeader(conf.CorsConfig),
+		csrfConfig:   conf.CsrfConfig,
+		noCacheStore: conf.NoStoreCache,
 		fixedHeaders: fh,
 	}
 	if gs.csrfConfig != nil {
@@ -114,7 +149,6 @@ func (gs *ginsecurity) checkSSL(c *gin.Context) bool {
 	return false
 }
 
-// cors
 func (gs *ginsecurity) checkOrigin(origin string) bool {
 	if gs.corsConfig.IsAllowAllOrigin {
 		return true
@@ -138,33 +172,31 @@ func (gs *ginsecurity) checkCORS(c *gin.Context) bool {
 	if len(origin) == 0 {
 		return true
 	}
-	// Same Origin
+
 	host := c.Request.Host
 	if origin == utils.HTTP_SCHEME+"://"+host || origin == utils.HTTPS_SCHEME+"://"+host {
 		return true
 	}
 
-	if !gs.checkOrigin(origin) {
+	if !gs.checkOrigin(origin) && (conf.CustomAllowOrigin == nil || !conf.CustomAllowOrigin(origin)) {
 		c.AbortWithStatus(http.StatusForbidden)
 		return false
 	}
 
+	rHeader := gs.corsHeader
 	header := c.Writer.Header()
 	if c.Request.Method == http.MethodOptions {
 		if !conf.IsAllowAllOrigin && conf.IsAllowCredentials {
 			header.Set(h.AccessControlAllowCredentials, "true")
 		}
-		if len(conf.AllowMethods) > 0 {
-			allowMethods := utils.StringsChange(conf.AllowHeaders, strings.ToUpper)
-			header.Set(h.AccessControlAllowMethod, strings.Join(allowMethods, ","))
+		if rHeader.AllowMethods != "" {
+			header.Set(h.AccessControlAllowMethod, rHeader.AllowMethods)
 		}
-		if len(conf.AllowHeaders) > 0 {
-			allowHeaders := utils.StringsChange(conf.AllowHeaders, http.CanonicalHeaderKey)
-			header.Set(h.AccessControlAllowHeaders, strings.Join(allowHeaders, ","))
+		if rHeader.AllowHeaders != "" {
+			header.Set(h.AccessControlAllowHeaders, rHeader.AllowHeaders)
 		}
-		if conf.MaxAge > time.Duration(0) {
-			value := strconv.FormatInt(int64(conf.MaxAge/time.Second), 10)
-			header.Set(h.AccessControlMaxAge, value)
+		if rHeader.MaxAge != "" {
+			header.Set(h.AccessControlMaxAge, rHeader.MaxAge)
 		}
 		if conf.IsAllowAllOrigin {
 			header.Set(h.AccessControlAllowOrigin, "*")
@@ -176,13 +208,13 @@ func (gs *ginsecurity) checkCORS(c *gin.Context) bool {
 				header.Add(h.Vary, h.AccessControlRequestHeaders)
 			}
 		}
+		c.AbortWithStatus(http.StatusNoContent)
 	} else {
 		if !conf.IsAllowAllOrigin && conf.IsAllowCredentials {
 			header.Set(h.AccessControlAllowCredentials, "true")
 		}
-		if len(conf.ExposeHeaders) > 0 {
-			exposeHeaders := utils.StringsChange(conf.ExposeHeaders, http.CanonicalHeaderKey)
-			header.Set(h.AccessControlExposeHeaders, strings.Join(exposeHeaders, ","))
+		if rHeader.ExposeHeaders != "" {
+			header.Set(h.AccessControlExposeHeaders, rHeader.ExposeHeaders)
 		}
 		if conf.IsAllowAllOrigin {
 			header.Set(h.AccessControlAllowOrigin, "*")

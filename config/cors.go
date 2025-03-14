@@ -13,6 +13,7 @@ type CorsConfig struct {
 	IsAllowAllOrigin   bool
 	AllowOrigins       []string
 	AllowRegexOrigins  []regexp.Regexp
+	CustomAllowOrigin  func(string) bool
 	AllowMethods       []string
 	AllowHeaders       []string
 	ExposeHeaders      []string
