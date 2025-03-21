@@ -45,7 +45,6 @@ func generateCorsHeader(conf *config.CorsConfig) *corsHeader {
 	return ch
 }
 
-
 type ginsecurity struct {
 	sslConfig    *config.SSLConfig
 	corsConfig   *config.CorsConfig
@@ -163,6 +162,7 @@ func (gs *ginsecurity) checkOrigin(origin string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -178,7 +178,7 @@ func (gs *ginsecurity) checkCORS(c *gin.Context) bool {
 		return true
 	}
 
-	if !gs.checkOrigin(origin) && (conf.CustomAllowOrigin == nil || !conf.CustomAllowOrigin(origin)) {
+	if !gs.checkOrigin(origin) && (conf.CustomAllowOrigin == nil || !conf.CustomAllowOrigin(c, origin)) {
 		c.AbortWithStatus(http.StatusForbidden)
 		return false
 	}

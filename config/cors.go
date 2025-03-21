@@ -6,6 +6,7 @@ import (
 
 	"github.com/found-cake/ginsecurity/utils"
 	"github.com/found-cake/ginsecurity/utils/header"
+	"github.com/gin-gonic/gin"
 )
 
 type CorsConfig struct {
@@ -13,7 +14,7 @@ type CorsConfig struct {
 	IsAllowAllOrigin   bool
 	AllowOrigins       []string
 	AllowRegexOrigins  []regexp.Regexp
-	CustomAllowOrigin  func(string) bool
+	CustomAllowOrigin  func(*gin.Context, string) bool
 	AllowMethods       []string
 	AllowHeaders       []string
 	ExposeHeaders      []string
