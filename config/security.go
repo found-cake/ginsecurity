@@ -4,6 +4,7 @@ import "github.com/found-cake/ginsecurity/utils"
 
 type SecurityConfig struct {
 	*SSLConfig
+	*CSPConfig
 	*CorsConfig
 	*CsrfConfig
 	STS *StrictTransportSecurityConfig
@@ -20,6 +21,7 @@ func Default() *SecurityConfig {
 	return &SecurityConfig{
 		SSLConfig:          DefaultSSLConfig(),
 		STS:                DefaultSTSConfig(),
+		CSPConfig:          DefaultCSPConfig(),
 		CorsConfig:         DefaultCORSConfig(),
 		CsrfConfig:         DefaultCsrfConfig(),
 		IENoOpen:           true,

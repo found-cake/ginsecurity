@@ -77,6 +77,16 @@ func newSecurity(conf *config.SecurityConfig) *ginsecurity {
 	if len(conf.BrowserXssFilter) > 0 {
 		fh.Set(h.XSSProtection, conf.BrowserXssFilter)
 	}
+	if conf.CSPConfig != nil && conf.CSPConfig.Enabled {
+		cspHeader := conf.CSPConfig.GenerateHeader()
+		if len(cspHeader) > 0 {
+			if conf.CSPConfig.ReportOnly {
+				fh.Set(h.ContentSecurityPolicyReportOnly, cspHeader)
+			} else {
+				fh.Set(h.ContentSecurityPolicy, cspHeader)
+			}
+		}
+	}
 	if conf.STS != nil {
 		if value := conf.STS.Value(); len(value) > 0 {
 			fh.Set(h.StrictTransportSecurity, value)
