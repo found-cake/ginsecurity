@@ -97,7 +97,7 @@ func TestSSLNoRedirect(t *testing.T) {
 }
 
 func TestSSLRedirectOtherHost(t *testing.T) {
-	const testHost = "gin-gonic.com"
+	testHost := "gin-gonic.com"
 	w := requestFoo(&config.SecurityConfig{
 		SSLConfig: &config.SSLConfig{
 			IsRedirect: true,
@@ -116,12 +116,15 @@ func TestCSPGenerateHeader(t *testing.T) {
 		SetDirective(csp.DefaultSrc, csp.Self, csp.Self).
 		SetDirective(csp.ObjectSrc, csp.None).
 		AddDirective(csp.ImgSrc, csp.Self, "gin-gonic.com").
-		AddDirective(csp.ImgSrc, "*.google.com", "gin-gonic.com")
+		AddDirective(csp.ImgSrc, "*.google.com", "gin-gonic.com").
+		AddDirective(csp.ConnectSrc, csp.Self)
 	hValue := conf.GenerateHeader()
 
 	assert.True(t, strings.Contains(hValue, csp.DefaultSrc))
 	assert.True(t, strings.Contains(hValue, csp.ObjectSrc))
 	assert.True(t, strings.Contains(hValue, csp.ImgSrc))
+	assert.True(t, strings.Index(hValue, csp.ObjectSrc) > strings.Index(hValue, csp.ImgSrc))
+	assert.False(t, strings.Index(hValue, csp.ConnectSrc) < strings.Index(hValue, csp.DefaultSrc))
 	assert.Equal(t, 1, strings.Count(hValue, "gin-gonic.com"))
 }
 
