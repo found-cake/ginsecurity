@@ -1,7 +1,6 @@
 package config
 
 import (
-	"sort"
 	"strings"
 
 	"github.com/found-cake/ginsecurity/utils/csp"
@@ -39,6 +38,47 @@ func (c *CSPConfig) RemoveDirective(directive string) *CSPConfig {
 	return c
 }
 
+func getDirectivePriority(directive string) int {
+	switch directive {
+	case csp.DefaultSrc:
+		return 1
+	case csp.ScriptSrc:
+		return 2
+	case csp.StyleSrc:
+		return 3
+	case csp.ImgSrc:
+		return 4
+	case csp.ConnectSrc:
+		return 5
+	case csp.FontSrc:
+		return 6
+	case csp.ObjectSrc:
+		return 7
+	case csp.MediaSrc:
+		return 8
+	case csp.FrameSrc:
+		return 9
+	case csp.ChildSrc:
+		return 10
+	case csp.FrameAncestors:
+		return 11
+	case csp.FormAction:
+		return 12
+	case csp.BaseURI:
+		return 13
+	case csp.ReportUri:
+		return 98
+	case csp.ReportTo:
+		return 99
+	case csp.UpgradeInsecureRequests:
+		return 100
+	case csp.BlockAllMixedContent:
+		return 101
+	default:
+		return 50
+	}
+}
+
 func (c *CSPConfig) GenerateHeader() string {
 	if len(c.CustomCSPHeader) > 0 {
 		return c.CustomCSPHeader
@@ -48,7 +88,6 @@ func (c *CSPConfig) GenerateHeader() string {
 		return ""
 	}
 
-	var directiveKeys []string
 	for directive, values := range c.DirectivesMap {
 		checkMap := make(map[string]bool)
 		var uniqueSources []string
@@ -58,19 +97,38 @@ func (c *CSPConfig) GenerateHeader() string {
 				uniqueSources = append(uniqueSources, value)
 			}
 		}
-		directiveKeys = append(directiveKeys, directive)
 		c.DirectivesMap[directive] = uniqueSources
 	}
-	sort.Strings(directiveKeys)
 
-	var directives []string
-	for _, directive := range directiveKeys {
+	var directiveKeys []string
+	for directive := range c.DirectivesMap {
+		directiveKeys = append(directiveKeys, directive)
+	}
+
+	directives := make([]string, 0, len(directiveKeys))
+
+	for len(directiveKeys) > 0 {
+		lowestPriority := 999
+		lowestIndex := 0
+
+		for i, key := range directiveKeys {
+			priority := getDirectivePriority(key)
+			if priority < lowestPriority {
+				lowestPriority = priority
+				lowestIndex = i
+			}
+		}
+
+		directive := directiveKeys[lowestIndex]
 		sources := c.DirectivesMap[directive]
+
 		if len(sources) > 0 {
 			directives = append(directives, directive+" "+strings.Join(sources, " "))
 		} else {
 			directives = append(directives, directive)
 		}
+
+		directiveKeys = append(directiveKeys[:lowestIndex], directiveKeys[lowestIndex+1:]...)
 	}
 
 	return strings.Join(directives, "; ")
