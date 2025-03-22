@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/found-cake/ginsecurity/utils"
+	"github.com/found-cake/ginsecurity/utils/csp"
 )
 
 type CSPConfig struct {
@@ -98,6 +98,6 @@ func (c *CSPConfig) DisableReportOnly() *CSPConfig {
 // default
 func DefaultCSPConfig() *CSPConfig {
 	return NewCSPBuilder().
-		SetDirective(utils.CSPDefaultSrc, utils.CSPSelf).
-		SetDirective(utils.CSPObjectSrc, utils.CSPNone)
+		SetDirective(csp.DefaultSrc, csp.Self).
+		SetDirective(csp.ObjectSrc, csp.None)
 }
