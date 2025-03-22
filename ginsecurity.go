@@ -27,7 +27,7 @@ func generateCorsHeader(conf *config.CorsConfig) *corsHeader {
 	ch := &corsHeader{}
 
 	if len(conf.AllowMethods) > 0 {
-		allowMethods := utils.StringsChange(conf.AllowHeaders, strings.ToUpper)
+		allowMethods := utils.StringsChange(conf.AllowMethods, strings.ToUpper)
 		ch.AllowMethods = strings.Join(allowMethods, ",")
 	}
 	if len(conf.AllowHeaders) > 0 {
