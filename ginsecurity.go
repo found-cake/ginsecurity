@@ -121,14 +121,18 @@ func (gs *ginsecurity) isSSLReq(req *http.Request) bool {
 		return true
 	}
 	for k, v := range gs.sslConfig.ProxyHeaders {
-		hv, ok := req.Header[k]
+		k = http.CanonicalHeaderKey(k)
+		headerValues, ok := req.Header[k]
 
-		if !ok {
+		if !ok || len(headerValues) == 0 {
 			continue
 		}
 
-		if strings.EqualFold(hv[0], v) {
-			return true
+		for _, headerValue := range headerValues {
+			headerValue = strings.TrimSpace(headerValue)
+			if strings.EqualFold(headerValue, v) {
+				return true
+			}
 		}
 	}
 	return false
