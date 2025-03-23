@@ -10,7 +10,7 @@ import (
 
 type CsrfConfig struct {
 	SessionGetter  func(c *gin.Context) sessions.Session
-	TokenGenerator func() (string, error)
+	TokenGenerator func() string
 	TokenGetter    func(c *gin.Context) string
 	IgnoreMethods  []string
 	IgnorePath     []string
@@ -21,12 +21,14 @@ func DefaultCsrfConfig() *CsrfConfig {
 		SessionGetter: func(c *gin.Context) sessions.Session {
 			return sessions.Default(c)
 		},
-		TokenGenerator: func() (string, error) {
-			if uuid, err := uuid.NewRandom(); err == nil {
-				return uuid.String(), nil
-			} else {
-				return "", err
+		TokenGenerator: func() string {
+			for i := 0; i < 3; i++ {
+				uuid, err := uuid.NewRandom()
+				if err == nil {
+					return uuid.String()
+				}
 			}
+			return "00000000-0000-0000-0000-000000000000"
 		},
 		TokenGetter: func(c *gin.Context) string {
 			r := c.Request
