@@ -18,6 +18,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// utils test
+var exmaple_list = []string{"a", "b", "c"}
+
+func TestStringsChange(t *testing.T) {
+	b := utils.StringsChange(exmaple_list, strings.ToUpper)
+	assert.Equal(t, b, []string{"A", "B", "C"})
+}
+
+func TestInArray(t *testing.T) {
+	assert.True(t, utils.InArray(exmaple_list, "a"))
+	assert.False(t, utils.InArray(exmaple_list, "d"))
+}
+
+// middleware test
 const resp_msg = "bar"
 
 func setupFooRouter(config *config.SecurityConfig) *gin.Engine {
@@ -391,3 +405,6 @@ func TestPrefileghtCredentials(t *testing.T) {
 	assert.True(t, utils.InArray(w.Header().Values(h.Vary), h.AccessControlRequestMethod))
 	assert.True(t, utils.InArray(w.Header().Values(h.Vary), h.AccessControlRequestHeaders))
 }
+
+// TODO: CSRF TEST
+// The PR(https://github.com/gin-contrib/sessions/pull/144) is merged, I'll continue writing the test code.
